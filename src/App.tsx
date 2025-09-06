@@ -138,11 +138,11 @@ function App(props: Props) {
                         })
                         .withRowHeaderStyle({
                             ...defaultRowHeaderStyle,
-                            alignText: 'center',
+                            alignText: 'left',
                             verticalAlignText: 'middle',
                             font: {...defaultTableFont, color: 'grey', weight: 650, size: 14},
                             background: {color: 'blue', opacity: 0.25},
-                            // padding: {left: 10, right: 10}
+                            padding: {left: 50, right: 10}
                         })
                         // apply the column style to all the columns, with default (low) priority
                         .withColumnStyles([], {
