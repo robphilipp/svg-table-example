@@ -1,10 +1,17 @@
+import React from "react";
 import './App.css'
 import {useEffect, useMemo, useRef} from "react";
 import * as d3 from "d3";
 import {DataFrame} from "data-frame-ts";
-import {createTable} from "./table/tableSvg.ts";
-import {TableFormatter} from "./table/tableFormatter.ts";
-import {defaultTableFont} from "./table/tableUtils.ts";
+import {
+    createTable,
+    defaultBorder,
+    defaultBorderElement,
+    defaultDimension,
+    defaultTableFont,
+    type Margin, TableFormatter
+} from "svg-table";
+import {TableStyler} from "svg-table";
 import {
     defaultCellStyle,
     defaultColumnHeaderStyle,
@@ -12,9 +19,9 @@ import {
     defaultRowHeaderStyle,
     defaultRowStyle,
     defaultTablePadding,
-    TableStyler
-} from "./table/tableStyler.ts";
-import {TableData} from "./table/tableData.ts";
+} from "svg-table";
+
+import {TableData} from "svg-table";
 
 
 const defaultBackground = '#202020';
@@ -68,21 +75,11 @@ function App(props: Props) {
 
     const svgStyle = useMemo<SvgStyle>(
         () => ({...initialSvgStyle, ...props.svgStyle}),
-        // () => ({...initialSvgStyle, ...props.svgStyle, width: props.width, height: props.height}),
-        [props.height, props.svgStyle, props.width]
+        [props.svgStyle]
     )
 
-    const tooltipStyle = defaultTooltipStyle
-
-    // hold a reference to the current width and the plot dimensions
-    // const plotDimRef = useRef<Dimensions>(plotDimensionsFrom(width, height, margin))
-
-    // const mainGRef = useRef<GSelection | null>(null)
+    // reference to the SVG container that will hold the table
     const containerRef = useRef<SVGSVGElement>(null)
-
-    // const [dimensions, setDimensions] = useState<[number, number]>([width, height])
-    // const [svgWidth, setSvgWidth] = useState<number>(width)
-    // const [svgHeight, setSvgHeight] = useState<number>(height)
 
     useEffect(
         () => {
@@ -93,8 +90,8 @@ function App(props: Props) {
                     .map(name => `${name}: ${svgStyle[name]}; `)
                     .join("")
 
-                // when the chart "backgroundColor" property is set (i.e. not the default value),
-                // then we need add it to the styles, overwriting any color that may have been
+                // when the "backgroundColor" property is set (i.e. not the default value),
+                // then add it to the styles, overwriting any color that may have been
                 // set in the svg style object
                 const background = backgroundColor !== defaultBackground ?
                     `background-color: ${backgroundColor}; ` :
@@ -122,9 +119,9 @@ function App(props: Props) {
                         .withTableFont({
                             ...defaultTableFont,
                             color: 'black',
-                            family: tooltipStyle.fontFamily,
-                            size: tooltipStyle.fontSize,
-                            weight: tooltipStyle.fontWeight
+                            family: defaultFontStyle.fontFamily,
+                            size: defaultFontStyle.fontSize,
+                            weight: defaultFontStyle.fontWeight
                         })
                         .withPadding({...defaultTablePadding, top: 20, left: 20})
                         .withColumnHeaderStyle({
@@ -134,7 +131,11 @@ function App(props: Props) {
                             alignText: 'center',
                             // verticalAlignText: 'bottom',
                             background: {color: 'grey', opacity: 0.25},
-                            font: {...defaultTableFont, color: 'black', weight: 650, size: 14}
+                            font: {...defaultTableFont, color: 'black', weight: 650, size: 14},
+                            border: {
+                                ...defaultBorder,
+                                bottom: {...defaultBorderElement, width: 0.5, color: 'darkgray'}
+                            },
                         })
                         .withRowHeaderStyle({
                             ...defaultRowHeaderStyle,
@@ -142,8 +143,10 @@ function App(props: Props) {
                             verticalAlignText: 'middle',
                             font: {...defaultTableFont, color: 'grey', weight: 650, size: 14},
                             background: {color: 'blue', opacity: 0.25},
-                            padding: {left: 50, right: 10}
-                        })
+                            dimension: {...defaultDimension, maxWidth: 120},
+                            padding: {left: 50, right: 10},
+                            border: {...defaultBorder, right: {...defaultBorderElement, width: 0.5, color: 'black'}},
+                        }, 1000)
                         // apply the column style to all the columns, with default (low) priority
                         .withColumnStyles([], {
                             ...defaultColumnStyle,
@@ -206,7 +209,14 @@ function App(props: Props) {
                     .attr('style', style + background + ` color: ${color}`)
             }
         },
-        [color, backgroundColor, svgStyle, tableId, width, height]
+        [
+            color, backgroundColor,
+            svgStyle,
+            tableId,
+            width, height,
+            margin.left, margin.right, margin.top, margin.bottom,
+            defaultFontStyle.fontFamily, defaultFontStyle.fontSize, defaultFontStyle.fontWeight
+        ]
     )
 
 
@@ -219,7 +229,7 @@ function App(props: Props) {
     </>)
 }
 
-export interface SvgStyle {
+type SvgStyle = {
     height?: string | number;
     width?: string | number;
     outline?: string;
@@ -227,28 +237,11 @@ export interface SvgStyle {
     [propName: string]: any;
 }
 
-export interface Margin {
-    top: number
-    right: number
-    bottom: number
-    left: number
-}
-
-// interface Dimensions {
-//     width: number
-//     height: number
-// }
-
 /**
  * Properties for rendering the tooltip. This is the style for the container
  * of the content.
  */
-export interface TooltipStyle {
-    /**
-     * Visibility of the tooltip when the mouse hovers over a data series or point.
-     */
-    visible: boolean
-
+type FontStyle = {
     /**
      * The size of the font displayed in the tooltip
      */
@@ -265,95 +258,13 @@ export interface TooltipStyle {
      * The font weight for the text displayed in the tooltip
      */
     fontWeight: number
-
-    /**
-     * The background color
-     */
-    backgroundColor: string;
-    backgroundOpacity: number;
-
-    borderColor: string;
-    borderOpacity: number;
-    borderWidth: number;
-    borderRadius: number;
-
-    paddingLeft: number;
-    paddingRight: number;
-    paddingTop: number;
-    paddingBottom: number;
 }
 
-export const defaultTooltipStyle: TooltipStyle = {
-    visible: false,
-
+const defaultFontStyle: FontStyle = {
     fontSize: 12,
     fontColor: 'rgba(10,31,58,0.99)',
-    // fontColor: '#d2933f',
     fontFamily: 'sans-serif',
     fontWeight: 250,
-
-    backgroundColor: '#202020',
-    backgroundOpacity: 0.8,
-
-    borderColor: '#d2933f',
-    borderOpacity: 1,
-    borderWidth: 1,
-    borderRadius: 5,
-
-    paddingLeft: 10,
-    paddingRight: 10,
-    paddingTop: 5,
-    paddingBottom: 10,
 };
-
-// function createPlotContainer(
-//     chartId: number,
-//     container: SVGSVGElement,
-//     plotDimensions: Dimensions,
-//     color: string
-// ): GSelection {
-//     const {width, height} = plotDimensions
-//     return d3.select<SVGSVGElement, any>(container)
-//         .attr('width', Math.max(0, width))
-//         .attr('height', Math.max(0, height))
-//         .attr('color', color)
-//         .append<SVGGElement>('g')
-//         .attr('id', `main-container-${chartId}`)
-// }
-
-// const plotDimensionsFrom =
-//     (containerWidth: number, containerHeight: number, plotMargins: Margin): Dimensions => ({
-//         width: containerWidth - plotMargins.left - plotMargins.right,
-//         height: containerHeight - plotMargins.top - plotMargins.bottom
-//     })
-
-// function App() {
-//   const [count, setCount] = useState(0)
-//
-//   return (
-//     <>
-//       <div>
-//         <a href="https://vite.dev" target="_blank">
-//           <img src={viteLogo} className="logo" alt="Vite logo" />
-//         </a>
-//         <a href="https://react.dev" target="_blank">
-//           <img src={reactLogo} className="logo react" alt="React logo" />
-//         </a>
-//       </div>
-//       <h1>Vite + React</h1>
-//       <div className="card">
-//         <button onClick={() => setCount((count) => count + 1)}>
-//           count is {count}
-//         </button>
-//         <p>
-//           Edit <code>src/App.tsx</code> and save to test HMR
-//         </p>
-//       </div>
-//       <p className="read-the-docs">
-//         Click on the Vite and React logos to learn more
-//       </p>
-//     </>
-//   )
-// }
 
 export default App
