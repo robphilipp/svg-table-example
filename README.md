@@ -12,6 +12,8 @@ The code shows how to:
 - Apply padding, fonts, alignment, borders, and conditional cell styling with `TableStyler`.
 - Render the result to SVG with `createTable`.
 
+> The code for the underlying `svg-table` library is available at https://github.com/robphilipp/svg-table.
+
 ## Getting started
 
 Prerequisites:
@@ -32,7 +34,6 @@ To create a production build:
 
 - src/App.tsx — The main example. It renders the SVG table and contains all styling/formatting logic.
 - src/us-treasury-bills-data.ts — The header and data array for the table.
-- public/us-trs-bill.csv and public/us-treas-bills-array.txt — Additional example data files (not required at runtime by the app as written).
 
 ## How it works (high level)
 
