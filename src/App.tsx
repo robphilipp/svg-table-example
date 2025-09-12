@@ -23,7 +23,6 @@ import {
 
 import {TableData} from "svg-table";
 
-
 const defaultBackground = '#202020';
 
 export const initialSvgStyle: SvgStyle = {
