@@ -1,9 +1,10 @@
 # SVG Table Example
 
-[//]: # (![Simple example]&#40;public/us-treas-table.png&#41;)
+This project is a tiny React app that demonstrates how to render a data table entirely in SVG using the `svg-table` library. 
+
 <kbd><image src="public/us-treas-table.png"/></kbd>
 
-This project is a tiny React app that demonstrates how to render a data table entirely in SVG using the `svg-table` library. The example displays a year of U.S. Treasury bill rates and highlights day-over-day changes:
+The example displays a year of U.S. Treasury bill rates and highlights day-over-day changes:
 
 - Green cells indicate the rate increased from the previous day.
 - Red cells indicate the rate decreased from the previous day.
