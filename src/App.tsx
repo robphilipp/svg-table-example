@@ -3,9 +3,10 @@ import './App.css'
 import * as d3 from "d3";
 import {DataFrame} from "data-frame-ts";
 import {
+    CellStyle,
     createTable,
     defaultBorder,
-    defaultBorderElement,
+    defaultBorderElement, defaultCellStyle,
     defaultColumnHeaderStyle,
     defaultColumnStyle, defaultRowStyle,
     defaultTableFont,
@@ -20,7 +21,6 @@ import {usTreasuryBillsData, usTreasuryBillsHeader} from "./us-treasury-bills-da
 const defaultBackground = 'rgb(227,227,227)';
 
 export const initialSvgStyle: SvgStyle = {
-    // width: '100%',
     top: 0,
     left: 0
 };
@@ -55,6 +55,13 @@ interface Props {
     svgStyle?: Partial<SvgStyle>
 }
 
+/**
+ * Simple example of rendering a year's worth of US treasury bill data in an SVG table.
+ * When the treasury bill rate has increased from the previous day, the cell is green.
+ * When the treasury bill rate has decreased from the previous day, the cell is red.
+ * @param props
+ * @constructor
+ */
 function App(props: Props) {
     const {
         tableId,
@@ -101,6 +108,7 @@ function App(props: Props) {
                         .flatMap(td => td.formatTable())
                     )
                     .map(tableData => TableStyler.fromTableData(tableData)
+                        // set the base font for the table
                         .withTableFont({
                             ...defaultTableFont,
                             color: 'black',
@@ -108,86 +116,86 @@ function App(props: Props) {
                             size: defaultFontStyle.fontSize,
                             weight: defaultFontStyle.fontWeight
                         })
-                        .withPadding({...defaultTablePadding, top: 10, left: 20})
+                        // padding for the overall table
+                        .withPadding({...defaultTablePadding, top: 10, left: 0})
+                        // adjust the header row with a bolder font, give it a bit more spacing,
+                        // and add border-lines on the top and bottom. this should be a high
+                        // priority style, which by default has a priority of Infinity.
                         .withColumnHeaderStyle({
                             ...defaultColumnHeaderStyle,
                             padding: {top: 10, bottom: 5},
                             dimension: {...defaultColumnHeaderStyle.dimension, maxHeight: 70},
+                            // want the header text to be right-aligned and vertically centered
                             alignText: 'right',
                             verticalAlignText: 'middle',
-                            // background: {color: 'grey', opacity: 0.25},
                             font: {...defaultTableFont, color: 'black', weight: 650, size: 14},
                             border: {
                                 ...defaultBorder,
+                                top: {...defaultBorderElement, width: 0.5, color: 'darkgray'},
                                 bottom: {...defaultBorderElement, width: 0.5, color: 'darkgray'}
                             },
-                        }, 1000)
-                        // .withRowHeaderStyle({
-                        //     ...defaultRowHeaderStyle,
-                        //     alignText: 'left',
-                        //     verticalAlignText: 'middle',
-                        //     font: {...defaultTableFont, color: 'grey', weight: 650, size: 14},
-                        //     background: {color: 'blue', opacity: 0.25},
-                        //     dimension: {...defaultDimension, maxWidth: 300},
-                        //     padding: {left: 50, right: 10},
-                        //     border: {...defaultBorder, right: {...defaultBorderElement, width: 0.5, color: 'black'}},
-                        // }, 1000)
-                        // apply the column style to all the columns, with default (low) priority
+                        })
                         .withRowStyles([], {
                             ...defaultRowStyle,
                             font: {...defaultTableFont, color: 'black'},
                             padding: {...defaultTablePadding, top: 10, bottom: 0},
                         })
+                        // we want the "observed-date" column to be centered
                         .withColumnStyle(0, {
                             ...defaultColumnStyle,
                             dimension: {...defaultColumnStyle.dimension, maxWidth: 300},
                             padding: {left: 60, right: 10},
                             alignText: 'center',
                         })
+                        // all the numeric columns should be right-aligned
                         .withColumnStyles([1, 2, 3, 4], {
                             ...defaultColumnStyle,
                             dimension: {...defaultColumnStyle.dimension, maxWidth: 300},
                             padding: {left: 60, right: 10},
                             alignText: 'right',
                         })
-                        // // column 4 gets its own style
-                        // .withColumnStyle(4, {
-                        //     ...defaultColumnStyle,
-                        //     alignText: 'left',
-                        //     padding: {left: 0, right: 0}
-                        // }, 100)
-                        // // todo this style isn't flowing through to the table
-                        // .withCellStyle(1, 4, {
-                        //     ...defaultCellStyle,
-                        //     alignText: 'center',
-                        //     font: {...defaultTableFont, color: 'red', weight: 650}
-                        // }, 210)
-                        // .withCellStyleWhen((value, rowIndex) => Math.floor(parseFloat(value)) % 2 === 0 && rowIndex === 1, {
-                        //     ...defaultCellStyle,
-                        //     alignText: 'right',
-                        //     verticalAlignText: 'bottom',
-                        //     font: {...defaultTableFont, color: 'purple', weight: 650, size: 13},
-                        //     background: {color: 'grey', opacity: 0.35},
-                        //     padding: {left: 10, right: 10, top: 30, bottom: 10}
-                        // }, 200)
-                        // .withCellStyleWhen((value, rowIndex) => Math.floor(parseFloat(value)) % 2 === 1 && rowIndex === 2, {
-                        //     ...defaultCellStyle,
-                        //     alignText: 'right',
-                        //     font: {...defaultTableFont, color: 'yellow', weight: 550, size: 13},
-                        //     background: {color: 'blue', opacity: 0.35}
-                        // }, 200)
-                        // .withRowStyles([], {
-                        //     ...defaultRowStyle,
-                        //     font: {...defaultTableFont, color: 'green', weight: 550},
-                        // }, 1)
+                        //
+                        // the next two styles apply conditionally
+                        //
+                        // when the current day's rate is higher than the previous day's rate, we want to
+                        // highlight it with green text and a somewhat transparent background.
+                        .withCellStyleWhen(
+                            (value, rowIndex, columnIndex) => {
+                                if (columnIndex > 0 && rowIndex > 0 && rowIndex < tableData.tableRowCount() - 1) {
+                                    return tableData.unwrapDataFrame()
+                                        .elementAt(rowIndex + 1, columnIndex)
+                                        .map(elem => value > elem)
+                                        .getOrElse(false)
+                                }
+                                return false
+                            },
+                            highlightedCellStyle(Direction.UP),
+                            200)
+                        // when the current day's rate is lower than the previous day's rate, we want to
+                        // highlight it with red text and a somewhat transparent background.
+                        .withCellStyleWhen(
+                            (value, rowIndex, columnIndex) => {
+                                if (columnIndex > 0 && rowIndex > 0 && rowIndex < tableData.tableRowCount() - 1) {
+                                    return tableData.unwrapDataFrame()
+                                        .elementAt(rowIndex + 1, columnIndex)
+                                        .map(elem => value < elem)
+                                        .getOrElse(false)
+                                }
+                                return false
+                            },
+                            highlightedCellStyle(Direction.DOWN),
+                            100)
                         .styleTable()
                     )
+                    // now create the SVG table
                     .flatMap(styledTable => createTable(
                         styledTable,
                         containerRef.current as SVGSVGElement,
                         `t-header-${tableId}`,
                         [10, 10]
                     ))
+                    // and return the rendering information we'll need to update the dimensions of the
+                    // SVG container so that the table data fits
                     .map(renderingInfo => {
                         const {
                             tableX: x,
@@ -219,7 +227,10 @@ function App(props: Props) {
 
     return (<>
         <div>
-            <div>SVG Table: ({tableId})</div>
+            <h3>U.S. Treasury Bills (SVG Table)</h3>
+            <div style={{fontSize: 12}}>Green cells indicate a rate increase from previous day.</div>
+            <div style={{fontSize: 12}}>Red cells indicate a rate decrease from previous day.</div>
+            {/* This is the SVG DOM element into which the table will be rendered */}
             <svg ref={containerRef}/>
         </div>
 
@@ -263,5 +274,18 @@ const defaultFontStyle: FontStyle = {
     fontFamily: 'sans-serif',
     fontWeight: 250,
 };
+
+enum Direction {UP, DOWN}
+
+function highlightedCellStyle(direction: Direction): CellStyle {
+    const color = direction === Direction.UP ? 'green' : 'red'
+    return {
+        ...defaultCellStyle,
+        alignText: 'right',
+        font: {...defaultTableFont, color, weight: 450, size: 13},
+        background: {color, opacity: 0.15},
+        padding: {left: 60, right: 10, top: 10, bottom: 0}
+    }
+}
 
 export default App

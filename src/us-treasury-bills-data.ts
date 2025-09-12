@@ -251,4 +251,4 @@ export const usTreasuryBillsData: Array<Array<string | number>> = [
     ['2025-09-08',4.11,3.95,3.74,3.50],
     ['2025-09-09',4.09,3.95,3.75,3.53],
     ['2025-09-10',4.08,3.94,3.74,3.52]
-]
+].sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime());
