@@ -1,29 +1,23 @@
-import React from "react";
+import React, {useEffect, useMemo, useRef} from "react";
 import './App.css'
-import {useEffect, useMemo, useRef} from "react";
 import * as d3 from "d3";
 import {DataFrame} from "data-frame-ts";
 import {
     createTable,
     defaultBorder,
     defaultBorderElement,
-    defaultDimension,
-    defaultTableFont,
-    type Margin, TableFormatter
-} from "svg-table";
-import {TableStyler} from "svg-table";
-import {
-    defaultCellStyle,
     defaultColumnHeaderStyle,
-    defaultColumnStyle,
-    defaultRowHeaderStyle,
-    defaultRowStyle,
+    defaultColumnStyle, defaultRowStyle,
+    defaultTableFont,
     defaultTablePadding,
+    type Margin,
+    TableData,
+    TableFormatter,
+    TableStyler
 } from "svg-table";
+import {usTreasuryBillsData, usTreasuryBillsHeader} from "./us-treasury-bills-data";
 
-import {TableData} from "svg-table";
-
-const defaultBackground = '#202020';
+const defaultBackground = 'rgb(227,227,227)';
 
 export const initialSvgStyle: SvgStyle = {
     // width: '100%',
@@ -66,7 +60,7 @@ function App(props: Props) {
         tableId,
         width,
         height,
-        color = '#d2933f',
+        color = 'rgb(227,227,227)',
         backgroundColor = defaultBackground,
     } = props
 
@@ -96,23 +90,15 @@ function App(props: Props) {
                     `background-color: ${backgroundColor}; ` :
                     ''
 
-                const renderingInfo = DataFrame
-                    .from<number | string>([
-                        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-                        [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9, 10.10],
-                    ])
+                const renderingInfo = DataFrame.from<number | string>(usTreasuryBillsData, true)
                     // create the table data that has the column headers
-                    .flatMap(df => TableData
-                        .fromDataFrame(df)
-                        .withColumnHeader(['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'])
-                        .flatMap(td => td.withRowHeader(['row 1', 'row 2']))
+                    .flatMap(df => TableData.fromDataFrame(df)
+                        .withColumnHeader(usTreasuryBillsHeader)
                     )
-                    // add the dat formatters for the (x, y) values
+                    // format the percentages as fixed point numbers
                     .flatMap(tableData => TableFormatter.fromTableData(tableData)
-                        // .addRowFormatter(1, value => formatTime(value as number, "ms"))
-                        .addRowFormatter(1, value => `${value as number} ms`)
-                        .flatMap(tf => tf.addRowFormatter(2, value => `${value as number} kg`))
-                        .flatMap(tf => tf.formatTable())
+                        .addColumnFormatters([1, 2, 3, 4], value => `${(value as number).toFixed(2)}`)
+                        .flatMap(td => td.formatTable())
                     )
                     .map(tableData => TableStyler.fromTableData(tableData)
                         .withTableFont({
@@ -122,66 +108,78 @@ function App(props: Props) {
                             size: defaultFontStyle.fontSize,
                             weight: defaultFontStyle.fontWeight
                         })
-                        .withPadding({...defaultTablePadding, top: 20, left: 20})
+                        .withPadding({...defaultTablePadding, top: 10, left: 20})
                         .withColumnHeaderStyle({
                             ...defaultColumnHeaderStyle,
-                            padding: {top: 10, bottom: 0},
+                            padding: {top: 10, bottom: 5},
                             dimension: {...defaultColumnHeaderStyle.dimension, maxHeight: 70},
-                            alignText: 'center',
-                            // verticalAlignText: 'bottom',
-                            background: {color: 'grey', opacity: 0.25},
+                            alignText: 'right',
+                            verticalAlignText: 'middle',
+                            // background: {color: 'grey', opacity: 0.25},
                             font: {...defaultTableFont, color: 'black', weight: 650, size: 14},
                             border: {
                                 ...defaultBorder,
                                 bottom: {...defaultBorderElement, width: 0.5, color: 'darkgray'}
                             },
-                        })
-                        .withRowHeaderStyle({
-                            ...defaultRowHeaderStyle,
-                            alignText: 'left',
-                            verticalAlignText: 'middle',
-                            font: {...defaultTableFont, color: 'grey', weight: 650, size: 14},
-                            background: {color: 'blue', opacity: 0.25},
-                            dimension: {...defaultDimension, maxWidth: 120},
-                            padding: {left: 50, right: 10},
-                            border: {...defaultBorder, right: {...defaultBorderElement, width: 0.5, color: 'black'}},
                         }, 1000)
+                        // .withRowHeaderStyle({
+                        //     ...defaultRowHeaderStyle,
+                        //     alignText: 'left',
+                        //     verticalAlignText: 'middle',
+                        //     font: {...defaultTableFont, color: 'grey', weight: 650, size: 14},
+                        //     background: {color: 'blue', opacity: 0.25},
+                        //     dimension: {...defaultDimension, maxWidth: 300},
+                        //     padding: {left: 50, right: 10},
+                        //     border: {...defaultBorder, right: {...defaultBorderElement, width: 0.5, color: 'black'}},
+                        // }, 1000)
                         // apply the column style to all the columns, with default (low) priority
-                        .withColumnStyles([], {
-                            ...defaultColumnStyle,
-                            padding: {left: 10, right: 10},
-                            alignText: 'right',
-                        })
-                        // column 4 gets its own style
-                        .withColumnStyle(4, {
-                            ...defaultColumnStyle,
-                            alignText: 'left',
-                            padding: {left: 0, right: 0}
-                        }, 100)
-                        // todo this style isn't flowing through to the table
-                        .withCellStyle(1, 4, {
-                            ...defaultCellStyle,
-                            alignText: 'center',
-                            font: {...defaultTableFont, color: 'red', weight: 650}
-                        }, 210)
-                        .withCellStyleWhen((value, rowIndex) => Math.floor(parseFloat(value)) % 2 === 0 && rowIndex === 1, {
-                            ...defaultCellStyle,
-                            alignText: 'right',
-                            verticalAlignText: 'bottom',
-                            font: {...defaultTableFont, color: 'purple', weight: 650, size: 13},
-                            background: {color: 'grey', opacity: 0.35},
-                            padding: {left: 10, right: 10, top: 30, bottom: 10}
-                        }, 200)
-                        .withCellStyleWhen((value, rowIndex) => Math.floor(parseFloat(value)) % 2 === 1 && rowIndex === 2, {
-                            ...defaultCellStyle,
-                            alignText: 'right',
-                            font: {...defaultTableFont, color: 'yellow', weight: 550, size: 13},
-                            background: {color: 'blue', opacity: 0.35}
-                        }, 200)
                         .withRowStyles([], {
                             ...defaultRowStyle,
-                            font: {...defaultTableFont, color: 'green', weight: 550},
-                        }, 1)
+                            font: {...defaultTableFont, color: 'black'},
+                            padding: {...defaultTablePadding, top: 10, bottom: 0},
+                        })
+                        .withColumnStyle(0, {
+                            ...defaultColumnStyle,
+                            dimension: {...defaultColumnStyle.dimension, maxWidth: 300},
+                            padding: {left: 60, right: 10},
+                            alignText: 'center',
+                        })
+                        .withColumnStyles([1, 2, 3, 4], {
+                            ...defaultColumnStyle,
+                            dimension: {...defaultColumnStyle.dimension, maxWidth: 300},
+                            padding: {left: 60, right: 10},
+                            alignText: 'right',
+                        })
+                        // // column 4 gets its own style
+                        // .withColumnStyle(4, {
+                        //     ...defaultColumnStyle,
+                        //     alignText: 'left',
+                        //     padding: {left: 0, right: 0}
+                        // }, 100)
+                        // // todo this style isn't flowing through to the table
+                        // .withCellStyle(1, 4, {
+                        //     ...defaultCellStyle,
+                        //     alignText: 'center',
+                        //     font: {...defaultTableFont, color: 'red', weight: 650}
+                        // }, 210)
+                        // .withCellStyleWhen((value, rowIndex) => Math.floor(parseFloat(value)) % 2 === 0 && rowIndex === 1, {
+                        //     ...defaultCellStyle,
+                        //     alignText: 'right',
+                        //     verticalAlignText: 'bottom',
+                        //     font: {...defaultTableFont, color: 'purple', weight: 650, size: 13},
+                        //     background: {color: 'grey', opacity: 0.35},
+                        //     padding: {left: 10, right: 10, top: 30, bottom: 10}
+                        // }, 200)
+                        // .withCellStyleWhen((value, rowIndex) => Math.floor(parseFloat(value)) % 2 === 1 && rowIndex === 2, {
+                        //     ...defaultCellStyle,
+                        //     alignText: 'right',
+                        //     font: {...defaultTableFont, color: 'yellow', weight: 550, size: 13},
+                        //     background: {color: 'blue', opacity: 0.35}
+                        // }, 200)
+                        // .withRowStyles([], {
+                        //     ...defaultRowStyle,
+                        //     font: {...defaultTableFont, color: 'green', weight: 550},
+                        // }, 1)
                         .styleTable()
                     )
                     .flatMap(styledTable => createTable(
@@ -261,7 +259,7 @@ type FontStyle = {
 
 const defaultFontStyle: FontStyle = {
     fontSize: 12,
-    fontColor: 'rgba(10,31,58,0.99)',
+    fontColor: 'rgb(227,227,227)',
     fontFamily: 'sans-serif',
     fontWeight: 250,
 };

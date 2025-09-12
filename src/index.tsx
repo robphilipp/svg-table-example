@@ -13,7 +13,7 @@ root.render(
         tableId={101010}
         width={500}
         height={300}
-        backgroundColor="rgba(210,147,63,0.1)"
+        backgroundColor="rgb(227,227,227)"
     />
   </React.StrictMode>
 );
