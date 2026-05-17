@@ -18,6 +18,8 @@ import {
 } from "svg-table";
 import {usTreasuryBillsData, usTreasuryBillsHeader} from "./us-treasury-bills-data";
 
+enum Direction {UP, DOWN}
+
 const defaultBackground = 'rgb(227,227,227)';
 
 export const initialSvgStyle: SvgStyle = {
@@ -274,8 +276,6 @@ const defaultFontStyle: FontStyle = {
     fontFamily: 'sans-serif',
     fontWeight: 250,
 };
-
-enum Direction {UP, DOWN}
 
 function highlightedCellStyle(direction: Direction): CellStyle {
     const color = direction === Direction.UP ? 'green' : 'red'
